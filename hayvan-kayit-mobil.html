@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1c355e">
+<title>Hayvan Kaydı - Mobil</title>
+<style>
+  :root{
+    --navy:#1c355e; --navy-2:#264a7d; --primary:#1d3fd8; --bg:#e8edf4; --card:#fff;
+    --line:#d7dee9; --text:#1b2433; --muted:#6b7689; --danger:#d93636; --ok:#22a06b;
+    --warn:#f0a23b; --teal:#26b5a5; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#cfd6e1;color:var(--text);font-size:14px}
+  /* Masaüstünde açılınca telefon boyutunda gösterir */
+  .app{max-width:430px;height:100dvh;margin:0 auto;background:var(--bg);display:flex;flex-direction:column;position:relative;overflow:hidden}
+  @media (min-width:600px){
+    body{display:flex;align-items:center;justify-content:center;padding:20px}
+    .app{height:880px;max-height:calc(100vh - 40px);border-radius:32px;border:10px solid #111;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+  }
+
+  /* Üst bar */
+  .topbar{background:var(--navy);color:#fff;padding:14px 16px 12px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+  .topbar h1{font-size:17px;font-weight:600;flex:1}
+  .topbar .sub{font-size:11px;opacity:.75;font-weight:400;display:block;margin-top:2px}
+  .icon-btn{background:none;border:0;color:#fff;width:32px;height:32px;display:grid;place-items:center;border-radius:8px;cursor:pointer}
+  .icon-btn:active{background:rgba(255,255,255,.12)}
+  svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+  .content{flex:1;overflow-y:auto;padding:12px 12px 20px}
+  .screen{display:none}.screen.active{display:flex;flex-direction:column;flex:1;min-height:0}
+
+  /* Kartlar */
+  .card{background:var(--card);border-radius:var(--radius);padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(20,40,80,.06)}
+  .card-title{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px}
+  .card-title .ic{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;color:#fff}
+  .card-title .ic svg{width:16px;height:16px}
+
+  /* Form */
+  .field{margin-bottom:12px}
+  .field:last-child{margin-bottom:0}
+  label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500}
+  label .req{color:var(--danger)}
+  input,select,textarea{width:100%;border:1px solid var(--line);background:#f7f9fc;border-radius:10px;padding:11px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none;appearance:none;-webkit-appearance:none}
+  select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7689' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+  select:invalid,select option[value=""]{color:#9aa4b5}
+  textarea{min-height:76px;resize:vertical}
+  input:focus,select:focus,textarea:focus{border-color:var(--primary);background:#fff}
+  .error{border-color:var(--danger)!important;background:#fff6f6!important}
+  .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .with-btn{display:flex;gap:8px}.with-btn input{flex:1}
+  .scan{flex-shrink:0;width:44px;border:1px solid var(--line);background:#fff;border-radius:10px;color:var(--navy);display:grid;place-items:center;cursor:pointer}
+
+  /* Segment (Evet/Hayır vb.) */
+  .seg{display:flex;background:#eef2f8;border-radius:10px;padding:3px;gap:3px}
+  .seg button{flex:1;border:0;background:transparent;padding:9px 4px;border-radius:8px;font-size:13px;color:var(--muted);cursor:pointer;font-family:inherit}
+  .seg button.on{background:var(--navy);color:#fff;font-weight:600}
+
+  /* Adım sekmeleri (Özet / Muayene / Kayıt temasında) */
+  .steps{display:flex;gap:4px;background:#d9e1ec;border-radius:999px;padding:4px;margin:0 12px 0;flex-shrink:0}
+  .steps button{flex:1;border:0;background:transparent;border-radius:999px;padding:8px 2px;font-size:11.5px;color:#55627a;cursor:pointer;font-family:inherit;white-space:nowrap}
+  .steps button.on{background:var(--navy);color:#fff;font-weight:600}
+  .steps button.done{color:var(--ok);font-weight:600}
+  .steps-wrap{background:var(--bg);padding:10px 0 2px;flex-shrink:0}
+  .progress{height:3px;background:#d9e1ec;margin:8px 12px 0;border-radius:3px;overflow:hidden}
+  .progress i{display:block;height:100%;background:var(--ok);width:20%;transition:width .25s}
+
+  /* Alt butonlar */
+  .footer{display:flex;gap:10px;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid #d3dbe7;flex-shrink:0}
+  .btn{border:0;border-radius:12px;padding:14px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px}
+  .btn-ghost{background:transparent;color:var(--navy);flex:0 0 90px}
+  .btn-main{background:var(--navy);color:#fff;flex:1}
+  .btn-blue{background:var(--primary);color:#fff;flex:1}
+  .btn-ok{background:var(--ok);color:#fff;flex:1}
+  .btn-red{background:#fff;color:var(--danger);border:1px solid var(--danger);flex:0 0 100px}
+  .btn:active{transform:scale(.98)}
+
+  /* Başlangıç ekranı */
+  .new-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:var(--radius);padding:14px;color:var(--navy);font-weight:600;cursor:pointer;margin-bottom:12px;border:1px dashed var(--navy-2)}
+  .new-card .chev{margin-left:auto;color:var(--muted)}
+  .search{display:flex;gap:8px;margin-bottom:10px}
+  .search input{background:#fff}
+  .search .scan{background:var(--navy);color:#fff;border:0}
+  .chips{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+  .chip{border:0;border-radius:8px;padding:8px 10px;font-size:12px;font-weight:600;color:#fff;white-space:nowrap;cursor:pointer;opacity:.55;font-family:inherit}
+  .chip.on{opacity:1;box-shadow:0 0 0 2px #fff inset}
+  .section-label{font-size:12px;color:var(--muted);font-weight:600;margin:4px 2px 8px}
+  .job{background:#fff;border-radius:var(--radius);padding:12px 14px;margin-bottom:10px;border:2px solid transparent;cursor:pointer;display:flex;gap:10px}
+  .job.sel{border-color:var(--primary);background:#f3f6ff}
+  .job .radio{width:18px;height:18px;border:2px solid #9aa4b5;border-radius:50%;flex-shrink:0;margin-top:2px;display:grid;place-items:center}
+  .job.sel .radio{border-color:var(--primary)}
+  .job.sel .radio::after{content:"";width:9px;height:9px;border-radius:50%;background:var(--primary)}
+  .job .no{font-weight:700;font-size:13px}
+  .job .ttl{font-weight:600;font-size:13px;margin:2px 0 4px}
+  .job .meta{font-size:12px;color:var(--muted);line-height:1.6}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 7px;border-radius:6px;margin-left:auto;align-self:flex-start;white-space:nowrap}
+  .b-ok{background:#e3f6ee;color:var(--ok)}
+  .b-blue{background:#e6ecff;color:var(--primary)}
+
+  /* Fotoğraf + Hızlı bilgiler */
+  .photo{display:flex;gap:12px;align-items:center}
+  .photo-box{width:96px;height:96px;border-radius:12px;background:#eef2f8 center/cover;border:1px dashed #a9b4c7;display:grid;place-items:center;color:#8a96aa;flex-shrink:0;overflow:hidden}
+  .photo-box svg{width:30px;height:30px}
+  .photo-actions{flex:1;display:flex;flex-direction:column;gap:8px}
+  .photo-actions label{margin:0;background:var(--primary);color:#fff;border-radius:10px;padding:10px;text-align:center;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px}
+  .photo-actions label.alt{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+  .photo-actions svg{width:16px;height:16px}
+  .quick{background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:var(--radius);padding:14px;margin-bottom:12px}
+  .quick h3{font-size:13px;opacity:.8;font-weight:600;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center}
+  .quick .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+  .quick .k{font-size:10.5px;opacity:.7}
+  .quick .v{font-size:13px;font-weight:600;margin-top:2px;word-break:break-word}
+  .quick .full{grid-column:1/-1}
+  .quick.no-team .team-info{display:none}
+  .thumbs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:10px}
+  .thumbs div{aspect-ratio:1;border-radius:8px;background:#eef2f8 center/cover}
+
+  /* Özet */
+  .sum-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #eef1f6;font-size:13px}
+  .sum-row:last-child{border:0}
+  .sum-row span:first-child{color:var(--muted)}
+  .sum-row span:last-child{font-weight:600;text-align:right}
+
+
+  /* Kayıtlı hayvanlar */
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+  .stat{background:#fff;border-radius:12px;padding:10px;text-align:center}
+  .stat b{display:block;font-size:20px;color:var(--navy)}
+  .stat span{font-size:11px;color:var(--muted)}
+  .animal{background:#fff;border-radius:var(--radius);padding:10px;margin-bottom:10px;display:flex;gap:12px;cursor:pointer;box-shadow:0 1px 3px rgba(20,40,80,.06)}
+  .animal:active{background:#f3f6ff}
+  .a-img{width:84px;height:84px;border-radius:12px;background:#eef2f8 center/cover;flex-shrink:0;display:grid;place-items:center;font-size:34px;position:relative}
+  .a-img .cnt{position:absolute;right:4px;bottom:4px;background:rgba(0,0,0,.6);color:#fff;font-size:10px;padding:1px 5px;border-radius:5px}
+  .a-body{flex:1;min-width:0}
+  .a-top{display:flex;align-items:flex-start;gap:6px}
+  .a-no{font-weight:700;font-size:14px;color:var(--navy)}
+  .a-name{font-size:12px;color:var(--muted)}
+  .a-meta{font-size:12px;color:var(--muted);line-height:1.6;margin-top:3px}
+  .b-warn{background:#fff3e0;color:#c77700}
+  .b-red{background:#fde8e8;color:var(--danger)}
+
+  /* Alt sekme çubuğu */
+  .tabbar{display:flex;gap:8px;background:#fff;border-top:1px solid #d3dbe7;padding:8px 10px calc(8px + env(safe-area-inset-bottom));flex-shrink:0}
+  .tab{flex:1;border:0;background:transparent;border-radius:14px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:12px;color:var(--muted);cursor:pointer;font-family:inherit;position:relative}
+  .tab svg{width:24px;height:24px}
+  .tab.on{background:#e6ecf8;color:var(--navy);font-weight:700}
+  .tab .cnt{position:absolute;top:4px;left:calc(50% + 8px);background:var(--danger);color:#fff;font-size:10px;font-weight:700;border-radius:999px;padding:1px 6px}
+  .list-banner{display:flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--navy),var(--navy-2));color:#fff;border-radius:var(--radius);padding:14px;margin-bottom:12px;cursor:pointer;box-shadow:0 4px 14px rgba(28,53,94,.25)}
+  .list-banner .ic{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.15);display:grid;place-items:center}
+  .list-banner b{font-size:15px;display:block}
+  .list-banner span{font-size:12px;opacity:.8}
+
+  /* Hayvan üzerinde işlemler */
+  .actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .act{border:0;background:#fff;border-radius:14px;padding:12px 4px;display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;box-shadow:0 1px 3px rgba(20,40,80,.08)}
+  .act:active{transform:scale(.97)}
+  .act i{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;color:#fff}
+  .act i svg{width:22px;height:22px}
+  .mini{display:flex;gap:12px;align-items:center;background:#fff;border-radius:var(--radius);padding:10px;margin-bottom:12px}
+  .mini .a-img{width:56px;height:56px;font-size:24px}
+  .checks{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .checks label{display:flex;gap:8px;align-items:center;margin:0;color:var(--text);font-size:13px;background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:10px}
+  .checks input,.chk{appearance:auto;-webkit-appearance:auto;width:18px;height:18px;padding:0;accent-color:var(--navy);flex-shrink:0}
+  .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .drug{border:1px dashed #b9c3d4;border-radius:12px;padding:10px;margin-bottom:10px;position:relative}
+  .drug .rm{position:absolute;top:6px;right:6px;border:0;background:none;color:var(--danger);font-size:18px;cursor:pointer}
+  .add-btn{width:100%;border:1px dashed var(--primary);background:#f3f6ff;color:var(--primary);border-radius:10px;padding:10px;font-weight:600;cursor:pointer;font-family:inherit}
+  .cages{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .cage{border:1px solid var(--line);background:#fff;border-radius:10px;padding:10px 0;text-align:center;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;color:var(--text)}
+  .cage.full{background:#eef0f3;color:#a3abb8;cursor:not-allowed}
+  .cage.cur{border:2px solid var(--warn)}
+  .cage.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .legend{display:flex;gap:12px;font-size:11px;color:var(--muted);margin-top:8px}
+  .legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+  .from-to{display:flex;align-items:center;gap:8px}
+  .from-to>div{flex:1;background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
+  .from-to small{display:block;font-size:11px;color:var(--muted)}
+  .from-to b{font-size:15px;color:var(--navy)}
+  .sheet-bg{position:absolute;inset:0;background:rgba(10,20,40,.45);z-index:20;display:none;align-items:flex-end}
+  .sheet-bg.open{display:flex}
+  .sheet{background:var(--bg);width:100%;max-height:90%;border-radius:20px 20px 0 0;overflow-y:auto;padding:0 0 16px;animation:up .25s}
+  @keyframes up{from{transform:translateY(40px);opacity:0}}
+  .sheet-img{height:240px;background:#dfe5ee center/cover;position:relative;display:grid;place-items:center;font-size:70px;border-radius:20px 20px 0 0}
+  .sheet-img .icon-btn{position:absolute;top:10px;right:10px;background:rgba(0,0,0,.45)}
+  .sheet .thumbs{padding:0 12px;margin-top:10px}
+  .sheet .thumbs div{cursor:pointer;border:2px solid transparent}
+  .sheet .thumbs div.on{border-color:var(--primary)}
+  .sheet-head{padding:12px 14px 4px}
+  .tk-list{display:flex;flex-wrap:wrap;gap:6px}
+  .tk{font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;background:#f1f3f6;color:#9aa4b5}
+  .tk.yes{background:#e3f6ee;color:var(--ok)}
+  .b-dead{background:#eceef2;color:#5b6474}
+  .animal.is-dead{opacity:.75}
+  .animal.is-dead .a-img,.sheet-img.dead{filter:grayscale(1)}
+  .dead-card{border-left:4px solid #8b1e1e}
+  .info-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 8px;flex:1}
+  .info-grid .k{font-size:10.5px;color:var(--muted)}
+  .info-grid .v{font-size:12.5px;font-weight:700;word-break:break-all}
+  .counter{text-align:right;font-size:11px;color:var(--muted);margin-top:3px}
+  .btn-danger{background:#b3261e;color:#fff;flex:0 0 100px}
+  .acil-box{background:#fff4f4;border:1px solid #f5c2c2;border-radius:12px;padding:10px;animation:up .2s}
+  .acil-box label{color:var(--danger);font-weight:600}
+  .toast{position:absolute;left:50%;bottom:90px;transform:translateX(-50%) translateY(20px);background:#1b2433;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;white-space:nowrap;z-index:9}
+  .toast.show{opacity:1;transform:translateX(-50%)}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ========== 1. EKRAN: Kayıt kaynağı seçimi ========== -->
+  <section class="screen active" id="scrStart">
+    <div class="topbar">
+      <button class="icon-btn" aria-label="Geri"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1>Hayvan Kaydı<span class="sub">Barınağa gelen hayvanı kaydet</span></h1>
+    </div>
+    <div class="content">
+      <div class="list-banner" onclick="openList()">
+        <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="4"/><circle cx="5" cy="10" r="2"/><circle cx="19" cy="10" r="2"/><circle cx="9" cy="5.5" r="2"/><circle cx="15" cy="5.5" r="2"/></svg></div>
+        <div style="flex:1"><b>Kayıtlı Hayvanlar</b><span id="bannerCnt"></span></div>
+        <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+      <div class="new-card" onclick="startNew()">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        Yeni Kayıt (Ekip işlemi seçmeden)
+        <svg class="chev" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg>
+      </div>
+
+      <div class="section-label">EKİP İŞLEMLERİNDEN SEÇ</div>
+      <div class="search">
+        <input id="q" placeholder="İhbar no, adres, ekip ara..." oninput="renderJobs()">
+        <button class="scan" aria-label="Ara"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4"/></svg></button>
+      </div>
+      <div class="chips">
+        <button class="chip on" style="background:var(--ok)" data-f="Hayvan Alındı" onclick="setFilter(this)">Teslim Alınan</button>
+        <button class="chip" style="background:var(--primary)" data-f="" onclick="setFilter(this)">Tümü</button>
+      </div>
+      <div id="jobs"></div>
+    </div>
+    <div class="footer">
+      <button class="btn btn-blue" onclick="startFromJob()">Seç ve Devam Et</button>
+    </div>
+    <nav class="tabbar">
+      <button class="tab on" onclick="show('scrStart')"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Yeni Kayıt</button>
+      <button class="tab" onclick="openList()"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="4"/><circle cx="5" cy="10" r="2"/><circle cx="19" cy="10" r="2"/><circle cx="9" cy="5.5" r="2"/><circle cx="15" cy="5.5" r="2"/></svg>Kayıtlı Hayvanlar</button>
+    </nav>
+  </section>
+
+  <!-- ========== 2. EKRAN: Kayıt formu (adımlı) ========== -->
+  <section class="screen" id="scrForm">
+    <div class="topbar">
+      <button class="icon-btn" onclick="show('scrStart')" aria-label="Geri"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 id="formTitle">Hayvan Kaydı — G-2026-002963<span class="sub" id="formSub">Teslim alınan geliş kaydına devam</span></h1>
+    </div>
+    <div class="steps-wrap">
+      <div class="steps" id="steps">
+        <button data-s="0" class="on">Kimlik</button>
+        <button data-s="1">Kayıt</button>
+        <button data-s="2">Sağlık</button>
+        <button data-s="3">Onay</button>
+      </div>
+      <div class="progress"><i id="prog"></i></div>
+    </div>
+
+    <div class="content" id="formContent">
+
+      <!-- ADIM 1: Hızlı Bilgiler + Kimlik ve Temel Bilgiler -->
+      <div class="step" data-step="0">
+        <div class="quick" id="quick">
+          <h3>Hızlı Bilgiler</h3>
+          <div class="grid">
+            <div><div class="k">Geçici Kayıt No</div><div class="v" id="qNo">G-2026-002963</div></div>
+            <div><div class="k">Geliş Tarihi / Saati</div><div class="v" id="qDate">17.11.2026 12:30</div></div>
+            <div><div class="k">Geliş Şekli</div><div class="v" id="qType">Saha Alımı (İhbarsız)</div></div>
+            <div><div class="k">Kayıt Oluşturan</div><div class="v" id="qUser">—</div></div>
+            <div class="team-info"><div class="k">Ekip</div><div class="v" id="qTeam">—</div></div>
+            <div class="team-info"><div class="k">Teslim Alınan Sayı</div><div class="v" id="qCount">—</div></div>
+            <div class="full team-info"><div class="k">Geliş Yeri</div><div class="v" id="qPlace">—</div></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:var(--primary)"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="4"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/><circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/></svg></span>Profil Fotoğrafı</div>
+          <div class="photo">
+            <div class="photo-box" id="photoBox"><svg viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg></div>
+            <div class="photo-actions">
+              <label><svg viewBox="0 0 24 24"><path d="M4 7h3l2-3h6l2 3h3v12H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Fotoğraf Çek
+                <input type="file" accept="image/*" capture="environment" hidden onchange="setPhoto(this)"></label>
+              <label class="alt"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="M21 15l-5-5L5 21"/></svg>Galeriden Ekle
+                <input type="file" accept="image/*" multiple hidden onchange="addPhotos(this)"></label>
+            </div>
+          </div>
+          <div class="thumbs" id="thumbs"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:var(--primary)"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M14 10h4M14 14h4M6 16c.5-1.5 1.7-2 3-2s2.5.5 3 2"/></svg></span>Kimlik ve Temel Bilgiler</div>
+          <div class="field">
+            <label>Hayvanın Türü <span class="req">*</span></label>
+            <div class="seg" id="tur" data-req="1">
+              <button type="button" class="on">Kedi</button><button type="button">Köpek</button><button type="button">Diğer</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Irkı <span class="req">*</span></label>
+            <select id="irk" required>
+              <option value="">Irkı Seçiniz...</option>
+              <option>Melez</option><option>Tekir</option><option>Van Kedisi</option><option>Ankara Kedisi</option><option>Kangal</option><option>Golden Retriever</option><option>Pitbull (Yasaklı)</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Cinsiyeti <span class="req">*</span></label>
+            <div class="seg" id="cinsiyet">
+              <button type="button">Erkek</button><button type="button">Dişi</button><button type="button" class="on">Belirsiz</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Kısırlaştırılmış mı?</label>
+            <div class="seg" id="kisir">
+              <button type="button">Evet</button><button type="button">Hayır</button><button type="button" class="on">Bilinmiyor</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Renk <span class="req">*</span></label>
+            <select id="renk" required>
+              <option value="">Renk Seçiniz...</option>
+              <option>Siyah</option><option>Beyaz</option><option>Gri</option><option>Sarı</option><option>Kahverengi</option><option>Tekir</option><option>Siyah-Beyaz</option><option>Karışık</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Mikroçip No</label>
+            <div class="with-btn"><input id="cip" inputmode="numeric" placeholder="15 haneli çip no">
+              <button class="scan" type="button" onclick="toast('Çip okuyucu açılıyor...')" aria-label="Çip okut"><svg viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg></button></div>
+          </div>
+          <div class="field">
+            <label>Küpe Numarası</label>
+            <div class="with-btn"><input id="kupe" placeholder="Örn: 46-1279">
+              <button class="scan" type="button" onclick="toast('Barkod okuyucu açılıyor...')" aria-label="Küpe okut"><svg viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg></button></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADIM 2: Geçici Tanımlama ve Kayıt -->
+      <div class="step" data-step="1" hidden>
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:#7c4ddb"><svg viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3"/></svg></span>Geçici Tanımlama ve Kayıt</div>
+          <div class="field">
+            <label>Geçici Barkod / Etiket No</label>
+            <div class="with-btn"><input id="barkod" placeholder="Etiket no giriniz">
+              <button class="scan" type="button" onclick="toast('Barkod okuyucu açılıyor...')" aria-label="Barkod okut"><svg viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg></button></div>
+          </div>
+          <div class="field"><label>Geçici Ad (Opsiyonel)</label><input id="gAd" placeholder="Örn: Pamuk"></div>
+          <div class="field">
+            <label>Bakımevi <span class="req">*</span></label>
+            <select id="bakimevi" required>
+              <option value="">Bakımevi Seçiniz...</option>
+              <option>Merkez Bakımevi</option><option>Dulkadiroğlu Bakımevi</option><option>Onikişubat Bakımevi</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Kafes <span class="req">*</span></label>
+            <select id="kafes" required>
+              <option value="">Kafes Seçiniz...</option>
+              <option>K-01</option><option>K-02</option><option>K-03</option><option>K-04</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Karantina Alanı <span class="req">*</span></label>
+            <select id="karantina" required>
+              <option value="">Karantina Alanı Seçiniz...</option>
+              <option>Karantina A</option><option>Karantina B</option><option>İzolasyon</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Getiriliş Şekli <span class="req">*</span></label>
+            <select id="getiris" required>
+              <option value="">Getiriliş Şekli Seçiniz...</option>
+              <option selected>Sokak / Cadde</option><option>Sahibinden Teslim</option><option>İtfaiye</option><option>Zabıta</option><option>Vatandaş Getirdi</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADIM 3: Sağlık Ön Değerlendirme - Genel Durum -->
+      <div class="step" data-step="2" hidden>
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:var(--danger)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M12 8v8M8 12h8"/></svg></span>Genel Durum Değerlendirmesi</div>
+          <div class="field">
+            <label>Genel Durum <span class="req">*</span></label>
+            <select id="genel" required><option value="">Genel Durum Seçiniz...</option><option>İyi</option><option>Orta</option><option>Kötü</option><option>Kritik</option></select>
+          </div>
+          <div class="field">
+            <label>Bilinç Durumu <span class="req">*</span></label>
+            <select id="bilinc" required><option value="">Bilinç Durumu Seçiniz...</option><option>Uyanık / Tepkili</option><option>Uyuşuk</option><option>Stupor</option><option>Bilinçsiz</option></select>
+          </div>
+          <div class="field">
+            <label>Yürüme Durumu <span class="req">*</span></label>
+            <select id="yurume" required><option value="">Yürüme Durumu Seçiniz...</option><option>Normal</option><option>Topallıyor</option><option>Yürüyemiyor</option></select>
+          </div>
+          <div class="field">
+            <label>Vücut Kondisyon Skoru (BCS) <span class="req">*</span></label>
+            <select id="bcs" required><option value="">Vücut Kondisyon Skoru Seçiniz...</option><option>1 - Çok Zayıf</option><option>2 - Zayıf</option><option>3 - İdeal</option><option>4 - Kilolu</option><option>5 - Obez</option></select>
+          </div>
+          <div class="field">
+            <label>Acil Müdahale Gerekiyor mu? <span class="req">*</span></label>
+            <div class="seg" id="acil" data-req="1">
+              <button type="button">Evet</button><button type="button">Hayır</button>
+            </div>
+          </div>
+          <div class="field acil-box" id="acilHekimBox" hidden>
+            <label>Müdahale Edecek Hekim <span class="req">*</span></label>
+            <select id="acilHekim"><option value="">Hekim Seçiniz...</option><option>Vet. Hekim 1</option><option>Vet. Hekim 2</option><option>Vet. Hekim 3</option></select>
+          </div>
+          <div class="field">
+            <label>Parazit Durumu</label>
+            <select id="parazit"><option value="">Parazit Durumu Seçiniz...</option><option>Yok</option><option>Pire</option><option>Kene</option><option>Bit</option><option>Birden Fazla</option></select>
+          </div>
+          <div class="field">
+            <label>Vücut Kirlilik Durumu</label>
+            <select id="kirlilik"><option value="">Vücut Kirlilik Durumu Seçiniz...</option><option>Temiz</option><option>Az Kirli</option><option>Çok Kirli</option></select>
+          </div>
+          <div class="field"><label>Vücut Isısı (°C)</label><input id="isi" type="number" step="0.1" inputmode="decimal" placeholder="Örn: 38.5"></div>
+          <div class="field"><label>Gözle Görülen</label><textarea id="gozle" placeholder="Yara, akıntı, kırık vb. gözlemler..."></textarea></div>
+          <div class="field">
+            <label>Yapılan Tetkikler</label>
+            <div class="checks" id="tetkik">
+              <label><input type="checkbox" value="Hemogram">Hemogram</label>
+              <label><input type="checkbox" value="Biyokimya">Biyokimya</label>
+              <label style="grid-column:1/-1"><input type="checkbox" value="Radyolojik Görüntüleme">Radyolojik Görüntüleme</label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADIM 4: Özet ve Onay -->
+      <div class="step" data-step="3" hidden>
+        <div class="card" style="display:flex;gap:12px;align-items:center">
+          <div class="photo-box" id="sumPhoto" style="width:72px;height:72px"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="4"/><circle cx="5" cy="9" r="2"/><circle cx="19" cy="9" r="2"/><circle cx="9" cy="5" r="2"/><circle cx="15" cy="5" r="2"/></svg></div>
+          <div>
+            <div style="font-size:11px;color:var(--muted)">Geçici Kayıt No</div>
+            <div style="font-weight:700;font-size:16px;color:var(--navy)" id="sumNo"></div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px" id="sumLine"></div>
+          </div>
+        </div>
+        <div class="card" id="sum0Card"><div class="card-title">Ekip Bilgisi</div><div id="sum0"></div></div>
+        <div class="card"><div class="card-title">Kimlik</div><div id="sum1"></div></div>
+        <div class="card"><div class="card-title">Geçici Kayıt</div><div id="sum2"></div></div>
+        <div class="card"><div class="card-title">Genel Durum</div><div id="sum3"></div></div>
+        <div class="card">
+          <div class="card-title">Kayıt Açıklaması</div>
+          <textarea id="kayitAciklama" maxlength="500" placeholder="Kayıtla ilgili açıklama giriniz..." oninput="this.nextElementSibling.textContent=this.value.length+'/500'"></textarea>
+          <div class="counter">0/500</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer" id="formFooter">
+      <button class="btn btn-ghost" id="btnBack" onclick="prevStep()">Geri</button>
+      <button class="btn btn-main" id="btnNext" onclick="nextStep()">İleri</button>
+    </div>
+  </section>
+
+  <!-- ========== 3. EKRAN: Kayıtlı Hayvanlar ========== -->
+  <section class="screen" id="scrList">
+    <div class="topbar">
+      <button class="icon-btn" onclick="show('scrStart')" aria-label="Geri"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1>Kayıtlı Hayvanlar<span class="sub" id="listSub"></span></h1>
+    </div>
+    <div class="content">
+      <div class="stats" id="stats"></div>
+      <div class="search">
+        <input id="aq" placeholder="Kayıt no, küpe, çip, ad, kaydeden ara..." oninput="renderAnimals()">
+        <button class="scan" onclick="toast('Barkod okuyucu açılıyor...')" aria-label="Okut"><svg viewBox="0 0 24 24"><path d="M4 7V4h3M17 4h3v3M20 17v3h-3M7 20H4v-3M7 12h10"/></svg></button>
+      </div>
+      <div class="chips" id="aChips">
+        <button class="chip on" style="background:var(--navy)" data-t="" onclick="setType(this)">Tümü</button>
+        <button class="chip" style="background:#7c4ddb" data-t="Kedi" onclick="setType(this)">Kedi</button>
+        <button class="chip" style="background:var(--primary)" data-t="Köpek" onclick="setType(this)">Köpek</button>
+        <button class="chip" style="background:var(--teal)" data-t="Diğer" onclick="setType(this)">Diğer</button>
+      </div>
+      <div id="animals"></div>
+    </div>
+    <nav class="tabbar">
+      <button class="tab" onclick="show('scrStart')"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg>Yeni Kayıt</button>
+      <button class="tab on" onclick="openList()"><svg viewBox="0 0 24 24"><circle cx="12" cy="14" r="4"/><circle cx="5" cy="10" r="2"/><circle cx="19" cy="10" r="2"/><circle cx="9" cy="5.5" r="2"/><circle cx="15" cy="5.5" r="2"/></svg>Kayıtlı Hayvanlar</button>
+    </nav>
+  </section>
+
+  <!-- ========== 4. EKRAN: Kayıtlı hayvan üzerinde işlem ========== -->
+  <section class="screen" id="scrAction">
+    <div class="topbar">
+      <button class="icon-btn" onclick="backToAnimal()" aria-label="Geri"><svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <h1 id="actTitle">İşlem<span class="sub" id="actSub"></span></h1>
+    </div>
+    <div class="content">
+      <div class="mini" id="actAnimal"></div>
+
+      <!-- TEDAVİ -->
+      <div class="act-form" data-act="tedavi" hidden>
+        <div class="card">
+          <div class="card-title">Tedavi Bilgisi</div>
+          <div class="row field"><div><label>Tarih <span class="req">*</span></label><input type="date" class="d-today"></div><div><label>Saat <span class="req">*</span></label><input type="time" class="t-now"></div></div>
+          <div class="field"><label>Uygulayan Veteriner <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Vet. Hekim 1</option><option>Vet. Hekim 2</option></select></div>
+          <div class="field"><label>Tanı <span class="req">*</span></label><input placeholder="Tanı giriniz"></div>
+          <div class="field"><label>Tedavi Türü</label><select><option value="">Seçiniz...</option><option>Medikal</option><option>Cerrahi</option><option>Pansuman / Yara Bakımı</option><option>Sıvı Tedavisi</option></select></div>
+          <div class="field"><label>Uygulanan Tedavi</label><textarea placeholder="Yapılan uygulamayı yazınız..."></textarea></div>
+        </div>
+        <div class="card">
+          <div class="card-title">İlaçlar</div>
+          <div id="drugs"></div>
+          <button class="add-btn" type="button" onclick="addDrug()">+ İlaç Ekle</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Takip</div>
+          <div class="row field"><div><label>Tedavi Süresi (gün)</label><input type="number" inputmode="numeric" placeholder="Örn: 7"></div><div><label>Kontrol Tarihi</label><input type="date"></div></div>
+          <div class="field"><label>Not</label><textarea placeholder="Ek notlar..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- AŞI -->
+      <div class="act-form" data-act="asi" hidden>
+        <div class="card">
+          <div class="card-title">Aşı Bilgisi</div>
+          <div class="field"><label>Aşı Türü <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Kuduz</option><option>Karma Aşı</option><option>İç Parazit</option><option>Dış Parazit</option><option>Lösemi (FeLV)</option><option>Leptospiroz</option></select></div>
+          <div class="row field"><div><label>Uygulama Tarihi <span class="req">*</span></label><input type="date" class="d-today"></div><div><label>Saat</label><input type="time" class="t-now"></div></div>
+          <div class="row field"><div><label>Seri / Lot No</label><input placeholder="Lot no"></div><div><label>Doz</label><input placeholder="Örn: 1 ml"></div></div>
+          <div class="field"><label>Uygulama Yolu</label><div class="seg"><button type="button" class="on">SC</button><button type="button">IM</button><button type="button">Oral</button><button type="button">Diğer</button></div></div>
+          <div class="field"><label>Uygulayan <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Vet. Hekim 1</option><option>Vet. Hekim 2</option><option>Tekniker 1</option><option>Tekniker 2</option></select></div>
+          <div class="field"><label>Sonraki Aşı Tarihi</label><input type="date"></div>
+          <div class="field"><label>Not</label><textarea placeholder="Ek notlar..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- KISIRLAŞTIRMA -->
+      <div class="act-form" data-act="kisir" hidden>
+        <div class="card">
+          <div class="card-title">Operasyon Bilgisi</div>
+          <div class="row field"><div><label>Operasyon Tarihi <span class="req">*</span></label><input type="date" class="d-today"></div><div><label>Saat</label><input type="time" class="t-now"></div></div>
+          <div class="field"><label>Operatör Veteriner <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Vet. Hekim 1</option><option>Vet. Hekim 2</option></select></div>
+          <div class="field"><label>Operasyon Türü <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Ovariohisterektomi (Dişi)</option><option>Kastrasyon (Erkek)</option></select></div>
+          <div class="field"><label>Anestezi Türü</label><select><option value="">Seçiniz...</option><option>Genel (Enjeksiyon)</option><option>Genel (İnhalasyon)</option></select></div>
+          <div class="field"><label>Kulak İşareti / Çentik</label><div class="seg"><button type="button" class="on">Yapıldı</button><button type="button">Yapılmadı</button></div></div>
+          <div class="field"><label>Komplikasyon</label><div class="seg"><button type="button">Var</button><button type="button" class="on">Yok</button></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Operasyon Sonrası</div>
+          <div class="row field"><div><label>Dikiş Alma Tarihi</label><input type="date"></div><div><label>Taburcu Tarihi</label><input type="date"></div></div>
+          <div class="field"><label>Not</label><textarea placeholder="Post-op notları..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- MUAYENE -->
+      <div class="act-form" data-act="muayene" hidden>
+        <div class="card">
+          <div class="card-title">Muayene Bilgisi</div>
+          <div class="row field"><div><label>Tarih <span class="req">*</span></label><input type="date" class="d-today"></div><div><label>Saat</label><input type="time" class="t-now"></div></div>
+          <div class="field"><label>Uygulayan <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Vet. Hekim 1</option><option>Vet. Hekim 2</option></select></div>
+          <div class="field"><label>Muayene Türü</label><select><option value="">Seçiniz...</option><option>Rutin Kontrol</option><option>Şikayet Üzerine</option><option>Operasyon Öncesi</option><option>Sahiplendirme Öncesi</option></select></div>
+          <div class="field"><label>Genel Durum</label><select><option value="">Seçiniz...</option><option>İyi</option><option>Orta</option><option>Kötü</option><option>Kritik</option></select></div>
+          <div class="field"><label>Şikayet</label><input placeholder="Şikayet giriniz"></div>
+          <div class="row3 field"><div><label>Ateş (°C)</label><input type="number" step="0.1" inputmode="decimal"></div><div><label>Kilo (kg)</label><input type="number" step="0.1" inputmode="decimal"></div><div><label>Boy (cm)</label><input type="number" inputmode="numeric"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Sistem Muayenesi</div>
+          <div class="checks">
+            <label><input type="checkbox">Deri ve Tüy</label><label><input type="checkbox">Göz ve Kulak</label>
+            <label><input type="checkbox">Solunum</label><label><input type="checkbox">Kardiyovasküler</label>
+            <label><input type="checkbox">Sindirim</label><label><input type="checkbox">Ürogenital</label>
+            <label><input type="checkbox">Kas-İskelet</label><label><input type="checkbox">Nörolojik</label>
+            <label><input type="checkbox">Diğer</label>
+          </div>
+        </div>
+        <div class="card">
+          <div class="field"><label>Fiziksel Bulgular</label><textarea></textarea></div>
+          <div class="field"><label>Tanı</label><input></div>
+          <div class="field"><label>Uygulanan Tedavi</label><input></div>
+          <div class="field"><label>Öneriler</label><textarea></textarea></div>
+        </div>
+      </div>
+
+      <!-- KAFES DEĞİŞİMİ -->
+      <div class="act-form" data-act="kafes" hidden>
+        <div class="card">
+          <div class="card-title">Konum</div>
+          <div class="from-to">
+            <div><small>Mevcut Kafes</small><b id="curCage">—</b></div>
+            <svg viewBox="0 0 24 24" style="color:var(--muted);flex:0 0 20px"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+            <div><small>Yeni Kafes</small><b id="newCage">Seçiniz</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Yeni Konum</div>
+          <div class="field"><label>Bakımevi <span class="req">*</span></label><select id="kBakimevi"><option>Merkez Bakımevi</option><option>Dulkadiroğlu Bakımevi</option><option>Onikişubat Bakımevi</option></select></div>
+          <div class="field"><label>Alan</label><select><option>Karantina A</option><option>Karantina B</option><option>İzolasyon</option><option>Genel Barınma</option><option>Sahiplendirme Alanı</option></select></div>
+          <div class="field">
+            <label>Kafes <span class="req">*</span></label>
+            <div class="cages" id="cages"></div>
+            <div class="legend"><span><i style="background:#fff;border:1px solid var(--line)"></i>Boş</span><span><i style="background:#eef0f3"></i>Dolu</span><span><i style="border:2px solid var(--warn)"></i>Mevcut</span><span><i style="background:var(--navy)"></i>Seçili</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="field"><label>Değişim Nedeni <span class="req">*</span></label><select><option value="">Seçiniz...</option><option>Karantina Süresi Doldu</option><option>Tedavi / İzolasyon</option><option>Kafes Temizliği / Bakım</option><option>Uyumsuzluk / Kavga</option><option>Sahiplendirme Hazırlığı</option></select></div>
+          <div class="row field"><div><label>Tarih</label><input type="date" class="d-today"></div><div><label>Saat</label><input type="time" class="t-now"></div></div>
+          <div class="field"><label>Not</label><textarea placeholder="Ek notlar..."></textarea></div>
+        </div>
+      </div>
+
+      <!-- ÖLÜM ÇIKIŞI -->
+      <div class="act-form" data-act="olum" hidden>
+        <div class="card" style="background:#eef4fd">
+          <div class="info-grid" id="olumInfo"></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:var(--primary)"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></span>Ölüm Bilgileri</div>
+          <div class="row field"><div><label>Ölüm Tarihi <span class="req">*</span></label><input type="date" class="d-today" id="oTarih" required></div><div><label>Ölüm Saati <span class="req">*</span></label><input type="time" class="t-now" id="oSaat" required></div></div>
+          <div class="field"><label>Ölüm Yeri <span class="req">*</span></label>
+            <select id="oYer" required><option value="">Ölüm Yeri Seçiniz...</option><option>Barınak - Kafes</option><option>Karantina Alanı</option><option>Muayene / Ameliyathane</option><option>Nakil Sırasında</option><option>Saha (Getirilirken)</option></select></div>
+          <div class="field"><label>Ölüm Nedeni <span class="req">*</span></label>
+            <select id="oNeden" required><option value="">Ölüm Nedeni Seçiniz...</option><option>Hastalık</option><option>Travma / Yaralanma</option><option>Yaşlılık</option><option>Ötanazi</option><option>Zehirlenme</option><option>Bilinmiyor</option></select></div>
+          <div class="field"><label>Ölüm Açıklaması</label>
+            <textarea id="oAciklama" maxlength="500" placeholder="Açıklama giriniz..." oninput="this.nextElementSibling.textContent=this.value.length+'/500'"></textarea><div class="counter">0/500</div></div>
+        </div>
+        <div class="card">
+          <div class="card-title"><span class="ic" style="background:var(--primary)"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5M15 15v4M13 17h4"/></svg></span>Ek Bilgiler</div>
+          <div class="checks field">
+            <label><input type="checkbox" id="oOtopsi">Otopsi yapıldı mı?</label>
+            <label><input type="checkbox" id="oNumune">Numune alındı mı?</label>
+          </div>
+          <div class="field"><label>Açıklama (Opsiyonel)</label>
+            <textarea id="oEk" maxlength="250" placeholder="Ek açıklama giriniz..." oninput="this.nextElementSibling.textContent=this.value.length+'/250'"></textarea><div class="counter">0/250</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="footer" id="actFooter">
+      <button class="btn btn-ghost" onclick="backToAnimal()">İptal</button>
+      <button class="btn btn-main" onclick="saveAction()">Kaydet</button>
+    </div>
+  </section>
+
+  <!-- Hayvan detay paneli -->
+  <div class="sheet-bg" id="sheet" onclick="if(event.target===this)closeSheet()">
+    <div class="sheet" id="sheetBody"></div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+
+<script>
+  // --- Örnek ekip işlemleri (API'den gelecek) ---
+  // Giriş yapan kullanıcı — gerçekte oturumdan çekilecek
+  const CURRENT_USER = 'Tekniker 1';
+
+  const JOBS = [
+    {no:'IH-2026-000991', title:'Sahipsiz / Başıboş', date:'17.11.2026 12:30', place:'DULKADİROĞLU / MEHMET AKİF', team:'EKİP100', from:'İtfaiye', status:'Hayvan Alındı', count:1},
+    {no:'IH-2026-000988', title:'Köpek - Saldırganlık', date:'17.11.2026 11:05', place:'ONİKİŞUBAT / HAYRULLAH', team:'EKİP995', from:'İhbar', status:'Hayvan Alındı', count:2},
+    {no:'IH-2026-000993', title:'Köpek - Saldırganlık', date:'17.11.2026 12:31', place:'BEŞEN mah. DEMİRKAPI sok.', team:'EKİP100', from:'İhbar', status:'Hayvan Bulunamadı', count:0},
+    {no:'IH-2026-000985', title:'Kedi - Yaralı', date:'17.11.2026 09:40', place:'DULKADİROĞLU / DERELİ mah.', team:'TÜM EKİP', from:'Vatandaş', status:'Hayvan Alındı', count:1},
+  ];
+  let filter = 'Hayvan Alındı', selectedJob = null, step = 0;
+  const STEPS = 4;
+  const $ = id => document.getElementById(id);
+
+  function renderJobs(){
+    const q = $('q').value.toLowerCase();
+    const list = JOBS.filter(j => (!filter || j.status === filter) &&
+      (j.no + j.title + j.place + j.team).toLowerCase().includes(q));
+    $('jobs').innerHTML = list.map(j => `
+      <div class="job ${selectedJob===j.no?'sel':''}" onclick="selectJob('${j.no}')">
+        <span class="radio"></span>
+        <div style="flex:1;min-width:0">
+          <div style="display:flex"><span class="no">${j.no}</span>
+            <span class="badge ${j.status==='Hayvan Alındı'?'b-ok':'b-blue'}">${j.status}</span></div>
+          <div class="ttl">${j.title}</div>
+          <div class="meta">📅 ${j.date}<br>📍 ${j.place}<br>👥 ${j.team} · Teslim: ${j.count}</div>
+        </div>
+      </div>`).join('') || '<div class="card" style="text-align:center;color:var(--muted)">Kayıt bulunamadı</div>';
+  }
+  function setFilter(el){
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on'); filter = el.dataset.f; renderJobs();
+  }
+  function selectJob(no){ selectedJob = no; renderJobs(); }
+
+  function show(id){
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    $(id).classList.add('active');
+  }
+  function tempNo(){ return 'G-2026-00' + (2963 + Math.floor(Math.random()*30)); }
+  function nowParts(){
+    const d = new Date(), p = n => String(n).padStart(2,'0');
+    return {date:`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`, time:`${p(d.getHours())}:${p(d.getMinutes())}`,
+            tr:`${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`};
+  }
+
+  let currentJob = null;
+  // Ekip işlemi seçilmeden: ekip bilgisi hiç gösterilmez
+  function startNew(){
+    const n = nowParts(), no = tempNo();
+    currentJob = null;
+    $('formTitle').firstChild.textContent = 'Yeni Kayıt — ' + no;
+    $('formSub').textContent = 'Ekip işlemi seçilmeden yeni kayıt';
+    $('qNo').textContent = no; $('qDate').textContent = n.tr;
+    $('qType').textContent = 'Saha Alımı (İhbarsız)';
+    $('quick').classList.add('no-team');
+    goStep(0); show('scrForm');
+  }
+  // Listeden seçilince: ekip bilgisi sadece Hızlı Bilgiler'de görünür
+  function startFromJob(){
+    const j = JOBS.find(x => x.no === selectedJob);
+    if(!j){ toast('Lütfen bir ekip işlemi seçin'); return; }
+    const no = tempNo();
+    currentJob = j;
+    $('formTitle').firstChild.textContent = 'Hayvan Kaydı — ' + no;
+    $('formSub').textContent = j.no + ' · teslim alınan geliş kaydına devam';
+    $('qNo').textContent = no; $('qDate').textContent = j.date;
+    $('qType').textContent = 'İhbarlı Alım (' + j.no + ')';
+    $('qTeam').textContent = j.team; $('qCount').textContent = j.count || 1; $('qPlace').textContent = j.place;
+    $('quick').classList.remove('no-team');
+    goStep(0); show('scrForm');
+  }
+
+  // Segment butonları
+  document.querySelectorAll('.seg').forEach(seg => seg.addEventListener('click', e => {
+    if(e.target.tagName !== 'BUTTON') return;
+    seg.querySelectorAll('button').forEach(b => b.classList.remove('on'));
+    e.target.classList.add('on'); seg.classList.remove('error');
+    if(seg.id === 'acil') toggleAcil();
+  }));
+  // Acil müdahale "Evet" ise hekim seçimi açılır ve zorunlu olur
+  function toggleAcil(){
+    const on = segVal('acil') === 'Evet';
+    $('acilHekimBox').hidden = !on; $('acilHekim').required = on;
+    if(!on){ $('acilHekim').value = ''; $('acilHekim').classList.remove('error'); }
+  }
+  const segVal = id => ($(id).querySelector('.on') || {}).textContent || '';
+
+  // Adım geçişleri
+  document.querySelectorAll('#steps button').forEach(b => b.onclick = () => {
+    const s = +b.dataset.s; if(s <= step || validate(step)) goStep(s);
+  });
+  function goStep(s){
+    step = s;
+    document.querySelectorAll('.step').forEach(el => el.hidden = +el.dataset.step !== s);
+    document.querySelectorAll('#steps button').forEach((b,i) => {
+      b.classList.toggle('on', i === s); b.classList.toggle('done', i < s);
+    });
+    $('prog').style.width = ((s+1)/STEPS*100) + '%';
+    const f = $('formFooter');
+    if(s === STEPS-1){
+      buildSummary();
+      f.innerHTML = `<button class="btn btn-red" onclick="reject()">Reddet</button>
+                     <button class="btn btn-ok" onclick="finish()">✓ Onayla ve Tamamla</button>`;
+    } else {
+      f.innerHTML = `<button class="btn btn-ghost" onclick="prevStep()">${s===0?"İptal":"Geri"}</button>
+                     <button class="btn btn-main" onclick="nextStep()">İleri</button>`;
+    }
+    $('formContent').scrollTop = 0;
+  }
+  function nextStep(){ if(validate(step)) goStep(Math.min(step+1, STEPS-1)); }
+  function prevStep(){ step === 0 ? show('scrStart') : goStep(step-1); }
+
+  function validate(s){
+    const box = document.querySelector(`.step[data-step="${s}"]`);
+    let ok = true;
+    box.querySelectorAll('[required]').forEach(el => {
+      const bad = !el.value; el.classList.toggle('error', bad); if(bad) ok = false;
+      el.oninput = el.onchange = () => el.classList.remove('error');
+    });
+    box.querySelectorAll('.seg[data-req]').forEach(seg => {
+      if(!seg.querySelector('.on')){ seg.classList.add('error'); ok = false; }
+    });
+    if(!ok){ toast('Zorunlu alanları doldurunuz'); box.querySelector('.error')?.scrollIntoView({behavior:'smooth',block:'center'}); }
+    return ok;
+  }
+
+  // Fotoğraf
+  let profileUrl = null;
+  function setPhoto(inp){
+    const f = inp.files[0]; if(!f) return;
+    profileUrl = URL.createObjectURL(f);
+    $('photoBox').style.backgroundImage = `url(${profileUrl})`; $('photoBox').innerHTML = '';
+  }
+  function addPhotos(inp){
+    [...inp.files].forEach((f,i) => {
+      const url = URL.createObjectURL(f);
+      if(!profileUrl && i===0){ profileUrl = url; $('photoBox').style.backgroundImage = `url(${url})`; $('photoBox').innerHTML=''; }
+      const d = document.createElement('div'); d.style.backgroundImage = `url(${url})`; $('thumbs').appendChild(d);
+    });
+  }
+
+  // Özet
+  const row = (k,v) => `<div class="sum-row"><span>${k}</span><span>${v || '—'}</span></div>`;
+  const val = id => { const e = $(id); return e.tagName==='SELECT' ? (e.value ? e.options[e.selectedIndex].text : '') : e.value; };
+  function buildSummary(){
+    $('sumNo').textContent = $('qNo').textContent;
+    $('sumLine').textContent = `${segVal('tur')} · ${val('irk')} · ${segVal('cinsiyet')} · Kaydeden: ${CURRENT_USER}`;
+    if(profileUrl){ $('sumPhoto').style.backgroundImage = `url(${profileUrl})`; $('sumPhoto').innerHTML=''; }
+    $('sum0Card').hidden = !currentJob;
+    if(currentJob) $('sum0').innerHTML = row('İhbar No',currentJob.no) + row('Ekip',currentJob.team)
+      + row('Tarih & Saat',currentJob.date) + row('Teslim Alınan Sayı',currentJob.count) + row('Geliş Yeri',currentJob.place);
+    $('sum1').innerHTML = row('Tür',segVal('tur')) + row('Irk',val('irk')) + row('Cinsiyet',segVal('cinsiyet'))
+      + row('Kısırlaştırılmış',segVal('kisir')) + row('Renk',val('renk')) + row('Mikroçip No',val('cip')) + row('Küpe No',val('kupe'));
+    $('sum2').innerHTML = row('Barkod / Etiket',val('barkod')) + row('Geçici Ad',val('gAd')) + row('Bakımevi',val('bakimevi'))
+      + row('Kafes',val('kafes')) + row('Karantina',val('karantina')) + row('Getiriliş Şekli',val('getiris'));
+    $('sum3').innerHTML = row('Genel Durum',val('genel')) + row('Bilinç',val('bilinc')) + row('Yürüme',val('yurume'))
+      + row('BCS',val('bcs')) + row('Acil Müdahale',segVal('acil') + (val('acilHekim') ? ' — ' + val('acilHekim') : '')) + row('Parazit',val('parazit'))
+      + row('Kirlilik',val('kirlilik')) + row('Vücut Isısı',val('isi') && val('isi')+' °C') + row('Gözle Görülen',val('gozle')) + row('Tetkikler',tetkikVal().join(', '));
+  }
+  function finish(){ saveAnimal(); toast('✓ Kayıt tamamlandı: ' + $('qNo').textContent); setTimeout(openList, 1200); }
+  function reject(){ if(confirm('Bu kayıt reddedilsin mi?')){ toast('Kayıt reddedildi'); setTimeout(() => show('scrStart'), 1000); } }
+
+
+  // ---------- Kayıtlı hayvanlar (örnek veri, API'den gelecek) ----------
+  const CAT_IMG = 'data:image/jpeg;base64,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';
+  const ANIMALS = [
+    {no:'G-2026-002963', tetkik:['Hemogram','Biyokimya'], kaydeden:'Tekniker 1', ad:'', tur:'Kedi', irk:'Tekir', cins:'Belirsiz', renk:'Gri', kupe:'', cip:'', bakimevi:'Merkez Bakımevi', kafes:'K-02', karantina:'Karantina A', durum:'Karantinada', tarih:'17.11.2026 12:30', ihbar:'', ekip:'', photos:[CAT_IMG]},
+    {no:'G-2026-002958', tetkik:['Hemogram','Biyokimya','Radyolojik Görüntüleme'], kaydeden:'Tekniker 2', ad:'Karabaş', tur:'Köpek', irk:'Kangal', cins:'Erkek', renk:'Sarı', kupe:'46-1280', cip:'900215003456781', bakimevi:'Merkez Bakımevi', kafes:'K-04', karantina:'Karantina B', durum:'Tedavide', tarih:'17.11.2026 10:15', ihbar:'IH-2026-000988', ekip:'EKİP995', photos:[]},
+    {no:'G-2026-002951', tetkik:[], kaydeden:'Tekniker 1', ad:'', tur:'Köpek', irk:'Melez', cins:'Dişi', renk:'Kahverengi', kupe:'46-1279', cip:'', bakimevi:'Dulkadiroğlu Bakımevi', kafes:'K-01', karantina:'Karantina A', durum:'Sağlıklı', tarih:'16.11.2026 16:40', ihbar:'IH-2026-000975', ekip:'EKİP100', photos:[]},
+    {no:'G-2026-002944', tetkik:['Radyolojik Görüntüleme'], kaydeden:'Tekniker 2', ad:'Pamuk', tur:'Kedi', irk:'Van Kedisi', cins:'Dişi', renk:'Beyaz', kupe:'', cip:'900215003451122', bakimevi:'Onikişubat Bakımevi', kafes:'K-03', karantina:'İzolasyon', durum:'Acil', tarih:'16.11.2026 09:05', ihbar:'', ekip:'', photos:[]},
+    {no:'G-2026-002940', tetkik:['Hemogram'], kaydeden:'Tekniker 1', ad:'', tur:'Diğer', irk:'—', cins:'Belirsiz', renk:'Karışık', kupe:'', cip:'', bakimevi:'Merkez Bakımevi', kafes:'K-01', karantina:'Karantina B', durum:'Karantinada', tarih:'15.11.2026 14:20', ihbar:'', ekip:'', photos:[]},
+  ];
+  const EMOJI = {Kedi:'🐱', Köpek:'🐶', Diğer:'🐾'};
+  const STATUS = {'Sağlıklı':'b-ok','Karantinada':'b-warn','Tedavide':'b-blue','Acil':'b-red'};
+  let typeFilter = '';
+
+  function openList(){ renderAnimals(); show('scrList'); }
+  function setType(el){
+    document.querySelectorAll('#aChips .chip').forEach(c => c.classList.remove('on'));
+    el.classList.add('on'); typeFilter = el.dataset.t; renderAnimals();
+  }
+  const imgStyle = a => a.photos[0] ? `style="background-image:url('${a.photos[0]}')"` : '';
+  function renderAnimals(){
+    const q = $('aq').value.toLowerCase();
+    const list = ANIMALS.filter(a => (!typeFilter || a.tur === typeFilter) &&
+      (a.no + a.ad + a.kupe + a.cip + a.irk + a.kaydeden).toLowerCase().includes(q));
+    updateCounts();
+    const c = t => ANIMALS.filter(a => a.tur === t).length;
+    $('stats').innerHTML = `<div class="stat"><b>${c('Kedi')}</b><span>Kedi</span></div>
+      <div class="stat"><b>${c('Köpek')}</b><span>Köpek</span></div><div class="stat"><b>${c('Diğer')}</b><span>Diğer</span></div>`;
+    $('animals').innerHTML = list.map(a => `
+      <div class="animal ${a.olum?'is-dead':''}" onclick="openAnimal('${a.no}')">
+        <div class="a-img" ${imgStyle(a)}>${a.photos[0] ? '' : EMOJI[a.tur]}${a.photos.length > 1 ? `<span class="cnt">${a.photos.length} 📷</span>` : ''}</div>
+        <div class="a-body">
+          <div class="a-top"><div><div class="a-no">${a.no}</div><div class="a-name">${a.ad || 'İsimsiz'}</div></div>${a.olum ? '<span class="badge b-dead">Ölüm Çıkışı</span>' : ''}</div>
+          <div class="a-meta">${a.tur} · ${a.irk} · ${a.cins}<br>${a.kupe ? '🏷 ' + a.kupe + ' · ' : ''}🏠 ${a.kafes} · ${a.karantina}<br>📅 ${a.tarih} · 👤 ${a.kaydeden}</div>
+        </div>
+      </div>`).join('') || '<div class="card" style="text-align:center;color:var(--muted)">Kayıt bulunamadı</div>';
+  }
+  function openAnimal(no){
+    const a = ANIMALS.find(x => x.no === no);
+    $('sheetBody').innerHTML = `
+      <div class="sheet-img ${a.olum?'dead':''}" id="bigImg" ${imgStyle(a)}>${a.photos[0] ? '' : EMOJI[a.tur]}
+        <button class="icon-btn" onclick="closeSheet()" aria-label="Kapat"><svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button></div>
+      ${a.photos.length > 1 ? `<div class="thumbs">${a.photos.map((p,i) => `<div class="${i?'':'on'}" style="background-image:url('${p}')" onclick="pickImg(this,'${i}','${a.no}')"></div>`).join('')}</div>` : ''}
+      <div class="sheet-head">
+        <div class="a-no" style="font-size:17px">${a.no}</div><div class="a-name">${a.ad || 'İsimsiz'} · ${a.tur}</div></div>
+      <div style="padding:8px 12px 0">
+        ${a.olum ? `<div class="card dead-card"><div class="card-title">💔 Ölüm Bilgileri</div>${row('Ölüm Tarihi',a.olum.tarih+' '+a.olum.saat)+row('Ölüm Yeri',a.olum.yer)+row('Ölüm Nedeni',a.olum.neden)+row('Açıklama',a.olum.aciklama)+row('Otopsi',a.olum.otopsi?'Yapıldı':'Yapılmadı')+row('Numune',a.olum.numune?'Alındı':'Alınmadı')+row('Ek Açıklama',a.olum.ek)+row('Kaydeden',a.olum.kaydeden)}</div>` : `
+        <div class="section-label">İŞLEMLER</div>
+        <div class="actions" style="margin-bottom:12px">
+          ${ACTIONS.map(x => `<button class="act" onclick="openAction('${x.key}','${a.no}')"><i style="background:${x.color}">${x.icon}</i>${x.label}</button>`).join('')}
+        </div>`}
+        <div class="card"><div class="card-title">Kimlik</div>${row('Tür',a.tur)+row('Irk',a.irk)+row('Cinsiyet',a.cins)+row('Renk',a.renk)+row('Küpe No',a.kupe)+row('Mikroçip No',a.cip)}</div>
+        ${a.acilHekim ? `<div class="card acil-box" style="padding:14px"><div class="card-title" style="color:var(--danger)">Acil Müdahale</div>${row('Hekim',a.acilHekim)}</div>` : ''}
+        <div class="card"><div class="card-title">Tetkikler</div>
+          <div class="tk-list">${TETKIK.map(t => `<span class="tk ${(a.tetkik||[]).includes(t)?'yes':''}">${(a.tetkik||[]).includes(t)?'✓':'✕'} ${t}</span>`).join('')}</div></div>
+        <div class="card"><div class="card-title">Barınak</div>${row('Bakımevi',a.bakimevi)+row('Kafes',a.kafes)+row('Karantina',a.karantina)+row('Kayıt Tarihi',a.tarih)+row('Kaydı Yapan',a.kaydeden)}</div>
+        ${a.aciklama ? `<div class="card"><div class="card-title">Kayıt Açıklaması</div><div style="font-size:13px;line-height:1.5">${a.aciklama}</div></div>` : ''}
+        ${a.ihbar ? `<div class="card"><div class="card-title">Ekip Bilgisi</div>${row('İhbar No',a.ihbar)+row('Ekip',a.ekip)}</div>` : ''}
+      </div>`;
+    $('sheet').classList.add('open');
+  }
+  function pickImg(el, i, no){
+    const a = ANIMALS.find(x => x.no === no);
+    $('bigImg').style.backgroundImage = `url('${a.photos[i]}')`;
+    el.parentNode.querySelectorAll('div').forEach(d => d.classList.remove('on')); el.classList.add('on');
+  }
+  function closeSheet(){ $('sheet').classList.remove('open'); }
+
+  // ---------- Kayıtlı hayvan üzerinde işlemler (sadece tasarım) ----------
+  const ACTIONS = [
+    {key:'tedavi',  label:'Tedavi',         color:'#d93636', icon:'<svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="8" rx="4" transform="rotate(-45 12 12)"/><path d="M9.2 9.2l5.6 5.6"/></svg>'},
+    {key:'asi',     label:'Aşı',            color:'#1d3fd8', icon:'<svg viewBox="0 0 24 24"><path d="M18 2l4 4M17 7l3-3M19 9L9 19l-4 1 1-4L16 6zM14 8l2 2M11 11l2 2M5 19l-3 3"/></svg>'},
+    {key:'kisir',   label:'Kısırlaştırma',  color:'#7c4ddb', icon:'<svg viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4L8.1 15.9M14.5 14.5L20 20M8.1 8.1L12 12"/></svg>'},
+    {key:'muayene', label:'Muayene',        color:'#22a06b', icon:'<svg viewBox="0 0 24 24"><path d="M6 3v6a5 5 0 0010 0V3M6 3H4M16 3h2M11 14v2a5 5 0 0010 0v-3"/><circle cx="21" cy="11" r="2"/></svg>'},
+    {key:'kafes',   label:'Kafes Değişimi', color:'#f0a23b', icon:'<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M8 4v16M12 4v16M16 4v16"/></svg>'},
+    {key:'olum',    label:'Ölüm Çıkışı',    color:'#8b1e1e', icon:'<svg viewBox="0 0 24 24"><path d="M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z"/><path d="M12 6l-2 4 4 2-2 4"/></svg>'},
+  ];
+  let actAnimal = null, actKey = '';
+
+  function updateCounts(){
+    $('listSub').textContent = ANIMALS.length + ' kayıt';
+    $('bannerCnt').textContent = `${ANIMALS.length} hayvan · Görüntüle ve işlem yap`;
+  }
+  function openAction(key, no){
+    const a = ANIMALS.find(x => x.no === no), act = ACTIONS.find(x => x.key === key);
+    actAnimal = a; actKey = key; closeSheet();
+    $('actTitle').firstChild.textContent = act.label;
+    $('actSub').textContent = a.no + (a.ad ? ' · ' + a.ad : '');
+    $('actAnimal').innerHTML = `<div class="a-img" ${imgStyle(a)}>${a.photos[0] ? '' : EMOJI[a.tur]}</div>
+      <div><div class="a-no">${a.no}</div><div class="a-meta" style="margin:0">${a.tur} · ${a.irk} · ${a.cins}<br>🏠 ${a.bakimevi} · ${a.kafes}</div></div>`;
+    document.querySelectorAll('.act-form').forEach(f => f.hidden = f.dataset.act !== key);
+    const n = nowParts();
+    document.querySelectorAll('.d-today').forEach(i => i.value = n.date);
+    document.querySelectorAll('.t-now').forEach(i => i.value = n.time);
+    if(key === 'tedavi' && !$('drugs').children.length) addDrug();
+    if(key === 'kafes') renderCages(a);
+    if(key === 'olum'){
+      const cell = (k,v) => `<div><div class="k">${k}</div><div class="v">${v || '—'}</div></div>`;
+      $('olumInfo').innerHTML = cell('Geçici No',a.no)+cell('Küpe No',a.kupe)+cell('Çip No',a.cip)+cell('Türü',a.tur)+cell('Irkı',a.irk)+cell('Cinsiyet',a.cins);
+      ['oYer','oNeden','oAciklama','oEk'].forEach(id => { $(id).value = ''; $(id).classList.remove('error'); });
+      $('oOtopsi').checked = $('oNumune').checked = false;
+      document.querySelectorAll('[data-act="olum"] .counter').forEach((c,i) => c.textContent = i ? '0/250' : '0/500');
+    }
+    $('actFooter').innerHTML = key === 'olum'
+      ? `<button class="btn btn-danger" onclick="backToAnimal()">İptal</button><button class="btn btn-main" onclick="saveAction()">Kaydet</button>`
+      : `<button class="btn btn-ghost" onclick="backToAnimal()">İptal</button><button class="btn btn-main" onclick="saveAction()">Kaydet</button>`;
+    show('scrAction'); document.querySelector('#scrAction .content').scrollTop = 0;
+  }
+  function backToAnimal(){ openList(); if(actAnimal) openAnimal(actAnimal.no); }
+  function saveAction(){
+    if(actKey === 'olum'){
+      let ok = true;
+      ['oTarih','oSaat','oYer','oNeden'].forEach(id => { const bad = !$(id).value; $(id).classList.toggle('error', bad); if(bad) ok = false; $(id).onchange = () => $(id).classList.remove('error'); });
+      if(!ok){ toast('Zorunlu alanları doldurunuz'); return; }
+      actAnimal.olum = {tarih:$('oTarih').value.split('-').reverse().join('.'), saat:$('oSaat').value, yer:val('oYer'), neden:val('oNeden'),
+        aciklama:$('oAciklama').value, otopsi:$('oOtopsi').checked, numune:$('oNumune').checked, ek:$('oEk').value, kaydeden:CURRENT_USER};
+      toast('Ölüm çıkışı kaydedildi'); setTimeout(backToAnimal, 900); return;
+    }
+    toast('✓ ' + $('actTitle').firstChild.textContent + ' kaydedildi (tasarım)'); setTimeout(backToAnimal, 900);
+  }
+
+  function addDrug(){
+    const d = document.createElement('div'); d.className = 'drug';
+    d.innerHTML = `<button class="rm" type="button" onclick="this.parentNode.remove()">×</button>
+      <div class="field"><label>İlaç Adı</label><input placeholder="İlaç adı"></div>
+      <div class="row3"><div><label>Doz</label><input placeholder="0.5 ml"></div>
+        <div><label>Yol</label><select><option>SC</option><option>IM</option><option>IV</option><option>Oral</option><option>Topikal</option></select></div>
+        <div><label>Sıklık</label><select><option>1x1</option><option>2x1</option><option>3x1</option><option>Tek doz</option></select></div></div>`;
+    $('drugs').appendChild(d);
+  }
+  function renderCages(a){
+    const full = ['K-03','K-06','K-07','K-10'];
+    $('curCage').textContent = a.kafes; $('newCage').textContent = 'Seçiniz';
+    $('cages').innerHTML = Array.from({length:12}, (_,i) => 'K-' + String(i+1).padStart(2,'0')).map(k => {
+      const cls = k === a.kafes ? 'cur' : full.includes(k) ? 'full' : '';
+      return `<button type="button" class="cage ${cls}" ${cls ? 'disabled' : ''} onclick="pickCage(this,'${k}')">${k}</button>`;
+    }).join('');
+  }
+  function pickCage(el, k){
+    document.querySelectorAll('.cage').forEach(c => c.classList.remove('on'));
+    el.classList.add('on'); $('newCage').textContent = k;
+  }
+
+
+  const TETKIK = ['Hemogram','Biyokimya','Radyolojik Görüntüleme'];
+  const tetkikVal = () => [...document.querySelectorAll('#tetkik input:checked')].map(i => i.value);
+
+  // Tamamlanan kaydı listeye ekler
+  function saveAnimal(){
+    const photos = [];
+    if(profileUrl) photos.push(profileUrl);
+    document.querySelectorAll('#thumbs div').forEach(d => { const u = d.style.backgroundImage.slice(5,-2); if(u && !photos.includes(u)) photos.push(u); });
+    ANIMALS.unshift({no:$('qNo').textContent, kaydeden:CURRENT_USER, ad:val('gAd'), tur:segVal('tur'), irk:val('irk'), cins:segVal('cinsiyet'), renk:val('renk'),
+      kupe:val('kupe'), cip:val('cip'), bakimevi:val('bakimevi'), kafes:val('kafes') || '—', karantina:val('karantina'),
+      durum: segVal('acil') === 'Evet' ? 'Acil' : 'Karantinada', tarih:$('qDate').textContent,
+      ihbar: currentJob ? currentJob.no : '', ekip: currentJob ? currentJob.team : '', tetkik: tetkikVal(), acilHekim: val('acilHekim'), aciklama: $('kayitAciklama').value, photos});
+  }
+
+  function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 2000); }
+
+  $('qUser').textContent = CURRENT_USER;
+  renderJobs(); updateCounts();
+</script>
+</body>
+</html>
